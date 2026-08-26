@@ -41,7 +41,18 @@ export default async()=>{
    return J({updatedAt:new Date().toISOString(),headlines:picked,ai:true});
   }catch(e){
    const picked=candidates.slice(0,5).map(x=>({title:x.title,url:x.url,domain:x.domain,published:x.published,why:'AI 中文整理暫時不可用；此則為今日高重要度全球市場新聞。'}));
-   return J({updatedAt:new Date().toISOString(),headlines:picked,ai:false,error:String(e.message||e)});
+   return J({
+      updatedAt:new Date().toISOString(),
+      headlines:picked,
+      ai:false,
+      error:String(e.message||e),
+      debug:{
+        hasGeminiKey:Boolean(process.env.GEMINI_API_KEY),
+        geminiKeyLength:process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
+        model:'gemini-2.5-flash-lite',
+        runtime:'netlify-function'
+      }
+    });
   }
  }catch(e){return J({updatedAt:new Date().toISOString(),headlines:[],error:String(e.message||e)})}
 }
