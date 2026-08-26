@@ -1,85 +1,47 @@
-const J=x=>new Response(JSON.stringify(x),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'public,max-age=900'}});
-const K=[
- ['federal reserve',7,'Fed／利率訊號可能直接改變 Nasdaq 估值與市場風險偏好。'],
- ['powell',7,'Powell 談話可能改變市場對利率路徑的定價。'],
- ['interest rate',6,'利率預期變化通常會放大 Nasdaq 波動。'],
- ['inflation',6,'通膨資訊會影響升降息預期。'],
- ['cpi',6,'CPI 會直接影響 Fed 與利率預期。'],
- ['pce',6,'PCE 是 Fed 關注的核心通膨指標。'],
- ['payroll',6,'非農相關訊息通常是重大市場催化劑。'],
- ['jobs',5,'就業資訊會影響 Fed 與利率預期。'],
- ['nvidia',6,'NVIDIA 對 Nasdaq 與 AI 題材情緒影響大。'],
- ['nasdaq',5,'Nasdaq 相關消息直接關聯 MNQ/NQ。'],
- ['tariff',6,'關稅政策可能改變通膨與企業獲利預期。'],
- ['treasury yield',6,'美債殖利率變動通常會直接影響科技股估值。'],
- ['war',5,'地緣政治風險可能推升避險與市場波動。'],
- ['apple',3,'大型科技股重大消息可能影響 Nasdaq。'],
- ['microsoft',3,'大型科技股重大消息可能影響 Nasdaq。'],
- ['meta',3,'大型科技股重大消息可能影響 Nasdaq。'],
- ['amazon',3,'大型科技股重大消息可能影響 Nasdaq。'],
- ['聯準會',7,'Fed／利率訊號可能直接改變 Nasdaq 估值與市場風險偏好。'],
- ['鮑爾',7,'Powell 談話可能改變市場對利率路徑的定價。'],
- ['通膨',6,'通膨資訊會影響升降息預期。'],
- ['非農',6,'非農相關訊息通常是重大市場催化劑。'],
- ['輝達',6,'NVIDIA 對 Nasdaq 與 AI 題材情緒影響大。'],
- ['關稅',6,'關稅政策可能改變通膨與企業獲利預期。'],
- ['美債殖利率',6,'美債殖利率變動通常會直接影響科技股估值。']
-];
+const J=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'public,max-age=3600,s-maxage=3600'}});
 function dec(s=''){return s.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
 function tag(b,n){const m=b.match(new RegExp('<'+n+'[^>]*>([\\s\\S]*?)<\\/'+n+'>','i'));return m?dec(m[1].trim()):''}
 function sourceName(b){const m=b.match(/<source[^>]*>([\s\S]*?)<\/source>/i);return m?dec(m[1].trim()):''}
-function rank(a){
- const s=(a.title+' '+a.source).toLowerCase();let score=0,why='可能影響美股風險偏好。';
- for(const [k,p,w] of K){if(s.includes(k.toLowerCase())){score+=p;if(p>=6)why=w}}
- if(/reuters|bloomberg|wall street journal|financial times|cnbc|associated press|ap news|marketwatch|中央社|鉅亨|經濟日報|工商時報/i.test(a.source))score+=2;
- return{score,why}
+function parseRSS(xml){const rows=[];for(const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)){const b=m[1],title=tag(b,'title'),url=tag(b,'link'),source=sourceName(b),published=tag(b,'pubDate');if(title&&url)rows.push({title,url,domain:source||'News',published})}return rows}
+function canonical(s=''){return s.toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g,'').slice(0,100)}
+function sourceBoost(n=''){if(/Reuters/i.test(n))return 6;if(/Bloomberg|Financial Times|Wall Street Journal|CNBC|Associated Press|AP News/i.test(n))return 5;if(/MarketWatch|Barron|Yahoo Finance/i.test(n))return 3;return 1}
+function keywordBoost(t=''){const s=t.toLowerCase(),k=[['federal reserve',6],['powell',6],['interest rate',5],['inflation',5],['cpi',5],['pce',5],['payroll',5],['jobs',4],['treasury yield',5],['nvidia',5],['nasdaq',4],['tariff',5],['china',3],['war',4],['oil',3],['apple',3],['microsoft',3],['amazon',3],['meta',3],['recession',4],['gdp',4],['earnings',3]];return k.reduce((n,[x,v])=>n+(s.includes(x)?v:0),0)}
+async function fetchCandidates(){
+ const qs=['("Federal Reserve" OR Powell OR inflation OR CPI OR PCE OR payroll OR "Treasury yield" OR Nasdaq) when:1d','(Nvidia OR Apple OR Microsoft OR Amazon OR Meta OR "AI stocks" OR earnings) when:1d','(tariff OR China OR oil OR war OR recession OR GDP OR "global markets") when:1d'];
+ const feeds=qs.map(q=>'https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=en-US&gl=US&ceid=US:en');
+ feeds.push('https://www.cnbc.com/id/100003114/device/rss/rss.html');
+ let rows=[];for(const u of feeds){try{const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.5'}});if(r.ok)rows.push(...parseRSS(await r.text()))}catch{}}
+ const seen=new Set(),dedup=[];for(const a of rows){const k=canonical(a.title);if(!k||seen.has(k))continue;seen.add(k);dedup.push({...a,score:sourceBoost(a.domain)+keywordBoost(a.title)})}
+ return dedup.sort((a,b)=>b.score-a.score||String(b.published).localeCompare(String(a.published))).slice(0,18);
 }
-function parseRSS(xml){
- const rows=[];
- for(const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)){
-  const b=m[1],title=tag(b,'title'),url=tag(b,'link'),source=sourceName(b),published=tag(b,'pubDate');
-  if(!title||!url)continue;
-  const rr=rank({title,source});
-  if(rr.score<3)continue;
-  rows.push({title,url,domain:source||'News',published,why:rr.why,score:rr.score});
- }
- return rows;
-}
-function mostlyChinese(s=''){const zh=(s.match(/[\u3400-\u9fff]/g)||[]).length;return zh>=Math.max(4,s.length*0.12)}
-async function translateTitle(title){
- if(mostlyChinese(title))return title;
- try{
-  const u='https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q='+encodeURIComponent(title);
-  const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.3'}});
-  if(!r.ok)return title;
-  const j=await r.json();
-  const t=(j?.[0]||[]).map(x=>x?.[0]||'').join('').trim();
-  return t||title;
- }catch{return title}
+async function geminiSelect(candidates){
+ const key=process.env.GEMINI_API_KEY;if(!key)throw new Error('GEMINI_API_KEY missing');
+ const compact=candidates.map((x,i)=>({id:i,title:x.title,source:x.domain,published:x.published}));
+ const prompt=`你是給台灣 MNQ/NQ 日內交易者使用的金融新聞編輯。以下是最近約24小時的全球財經新聞候選。請依對美股、Nasdaq、利率、美元、美債、全球風險情緒的實際重要性挑最重要的5條。
+規則：
+1. 不重複同一事件。
+2. 優先央行、通膨、就業、利率、美債、地緣政治、關稅，以及足以影響Nasdaq的大型科技公司消息。
+3. 不預測多空，不喊單。
+4. title_zh 必須是自然精簡的繁體中文標題。
+5. summary_zh 用1句繁體中文說明為什麼交易者今天需要知道，約25～55字。
+6. 只能從候選中選，回傳候選id。
+7. 僅輸出JSON。
+格式：{"items":[{"id":0,"title_zh":"...","summary_zh":"..."}]}
+候選：${JSON.stringify(compact)}`;
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1200,responseMimeType:'application/json'}})});
+ if(!r.ok){const e=await r.text();throw new Error('Gemini '+r.status+' '+e.slice(0,180))}
+ const data=await r.json(),raw=(data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim(),parsed=JSON.parse(raw);
+ return Array.isArray(parsed.items)?parsed.items:[];
 }
 export default async()=>{
- const qzh='(聯準會 OR 鮑爾 OR 通膨 OR CPI OR PCE OR 非農 OR 就業 OR 輝達 OR Nasdaq OR 關稅 OR 美債殖利率) when:1d';
- const qen='("Federal Reserve" OR Powell OR inflation OR CPI OR PCE OR payroll OR jobs OR Nvidia OR Nasdaq OR tariff OR "Treasury yield") when:1d';
- const feeds=[
-  'https://news.google.com/rss/search?q='+encodeURIComponent(qzh)+'&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-  'https://news.google.com/rss/search?q='+encodeURIComponent(qen)+'&hl=en-US&gl=US&ceid=US:en',
-  'https://www.cnbc.com/id/100003114/device/rss/rss.html'
- ];
- let rows=[];
- for(const u of feeds){
+ try{
+  const candidates=await fetchCandidates();if(!candidates.length)return J({updatedAt:new Date().toISOString(),headlines:[],error:'no candidates'});
   try{
-   const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.3'}});
-   if(r.ok)rows.push(...parseRSS(await r.text()));
-  }catch{}
- }
- const seen=new Set(),picked=[];
- for(const a of rows.sort((a,b)=>b.score-a.score||String(b.published).localeCompare(String(a.published)))){
-  const k=a.title.toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g,'').slice(0,90);
-  if(seen.has(k))continue;seen.add(k);picked.push(a);if(picked.length===5)break;
- }
- const headlines=[];
- for(const a of picked){
-  headlines.push({...a,title:await translateTitle(a.title)});
- }
- return J({updatedAt:new Date().toISOString(),headlines});
+   const ai=await geminiSelect(candidates),picked=[];for(const x of ai){const src=candidates[Number(x.id)];if(!src||!x.title_zh)continue;picked.push({title:String(x.title_zh).trim(),url:src.url,domain:src.domain,published:src.published,why:String(x.summary_zh||'').trim()});if(picked.length===5)break}
+   return J({updatedAt:new Date().toISOString(),headlines:picked,ai:true});
+  }catch(e){
+   const picked=candidates.slice(0,5).map(x=>({title:x.title,url:x.url,domain:x.domain,published:x.published,why:'AI 中文整理暫時不可用；此則為今日高重要度全球市場新聞。'}));
+   return J({updatedAt:new Date().toISOString(),headlines:picked,ai:false,error:String(e.message||e)});
+  }
+ }catch(e){return J({updatedAt:new Date().toISOString(),headlines:[],error:String(e.message||e)})}
 }
