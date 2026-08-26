@@ -10,7 +10,7 @@ async function fetchCandidates(){
  const qs=['("Federal Reserve" OR Powell OR inflation OR CPI OR PCE OR payroll OR "Treasury yield" OR Nasdaq) when:1d','(Nvidia OR Apple OR Microsoft OR Amazon OR Meta OR "AI stocks" OR earnings) when:1d','(tariff OR China OR oil OR war OR recession OR GDP OR "global markets") when:1d'];
  const feeds=qs.map(q=>'https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=en-US&gl=US&ceid=US:en');
  feeds.push('https://www.cnbc.com/id/100003114/device/rss/rss.html');
- let rows=[];for(const u of feeds){try{const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.5'}});if(r.ok)rows.push(...parseRSS(await r.text()))}catch{}}
+ let rows=[];for(const u of feeds){try{const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.7'}});if(r.ok)rows.push(...parseRSS(await r.text()))}catch{}}
  const seen=new Set(),dedup=[];for(const a of rows){const k=canonical(a.title);if(!k||seen.has(k))continue;seen.add(k);dedup.push({...a,score:sourceBoost(a.domain)+keywordBoost(a.title)})}
  return dedup.sort((a,b)=>b.score-a.score||String(b.published).localeCompare(String(a.published))).slice(0,18);
 }
@@ -28,7 +28,7 @@ async function geminiSelect(candidates){
 7. 僅輸出JSON。
 格式：{"items":[{"id":0,"title_zh":"...","summary_zh":"..."}]}
 候選：${JSON.stringify(compact)}`;
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1200,responseMimeType:'application/json'}})});
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',{method:'POST',headers:{'x-goog-api-key':key,'content-type':'application/json'},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:1200,responseMimeType:'application/json'}})});
  if(!r.ok){const e=await r.text();throw new Error('Gemini '+r.status+' '+e.slice(0,180))}
  const data=await r.json(),raw=(data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim(),parsed=JSON.parse(raw);
  return Array.isArray(parsed.items)?parsed.items:[];
@@ -41,18 +41,7 @@ export default async()=>{
    return J({updatedAt:new Date().toISOString(),headlines:picked,ai:true});
   }catch(e){
    const picked=candidates.slice(0,5).map(x=>({title:x.title,url:x.url,domain:x.domain,published:x.published,why:'AI 中文整理暫時不可用；此則為今日高重要度全球市場新聞。'}));
-   return J({
-      updatedAt:new Date().toISOString(),
-      headlines:picked,
-      ai:false,
-      error:String(e.message||e),
-      debug:{
-        hasGeminiKey:Boolean(process.env.GEMINI_API_KEY),
-        geminiKeyLength:process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.length : 0,
-        model:'gemini-2.5-flash-lite',
-        runtime:'netlify-function'
-      }
-    });
+   return J({updatedAt:new Date().toISOString(),headlines:picked,ai:false,error:String(e.message||e)});
   }
  }catch(e){return J({updatedAt:new Date().toISOString(),headlines:[],error:String(e.message||e)})}
 }
