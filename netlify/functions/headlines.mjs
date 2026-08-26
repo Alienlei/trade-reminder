@@ -16,12 +16,24 @@ const K=[
  ['apple',3,'大型科技股重大消息可能影響 Nasdaq。'],
  ['microsoft',3,'大型科技股重大消息可能影響 Nasdaq。'],
  ['meta',3,'大型科技股重大消息可能影響 Nasdaq。'],
- ['amazon',3,'大型科技股重大消息可能影響 Nasdaq。']
+ ['amazon',3,'大型科技股重大消息可能影響 Nasdaq。'],
+ ['聯準會',7,'Fed／利率訊號可能直接改變 Nasdaq 估值與市場風險偏好。'],
+ ['鮑爾',7,'Powell 談話可能改變市場對利率路徑的定價。'],
+ ['通膨',6,'通膨資訊會影響升降息預期。'],
+ ['非農',6,'非農相關訊息通常是重大市場催化劑。'],
+ ['輝達',6,'NVIDIA 對 Nasdaq 與 AI 題材情緒影響大。'],
+ ['關稅',6,'關稅政策可能改變通膨與企業獲利預期。'],
+ ['美債殖利率',6,'美債殖利率變動通常會直接影響科技股估值。']
 ];
 function dec(s=''){return s.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>')}
 function tag(b,n){const m=b.match(new RegExp('<'+n+'[^>]*>([\\s\\S]*?)<\\/'+n+'>','i'));return m?dec(m[1].trim()):''}
 function sourceName(b){const m=b.match(/<source[^>]*>([\s\S]*?)<\/source>/i);return m?dec(m[1].trim()):''}
-function rank(a){const s=(a.title+' '+a.source).toLowerCase();let score=0,why='可能影響美股風險偏好。';for(const [k,p,w] of K){if(s.includes(k)){score+=p;if(p>=6)why=w}}if(/reuters|bloomberg|wall street journal|financial times|cnbc|associated press|ap news|marketwatch/i.test(a.source))score+=2;return{score,why}}
+function rank(a){
+ const s=(a.title+' '+a.source).toLowerCase();let score=0,why='可能影響美股風險偏好。';
+ for(const [k,p,w] of K){if(s.includes(k.toLowerCase())){score+=p;if(p>=6)why=w}}
+ if(/reuters|bloomberg|wall street journal|financial times|cnbc|associated press|ap news|marketwatch|中央社|鉅亨|經濟日報|工商時報/i.test(a.source))score+=2;
+ return{score,why}
+}
 function parseRSS(xml){
  const rows=[];
  for(const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)){
@@ -33,25 +45,41 @@ function parseRSS(xml){
  }
  return rows;
 }
+function mostlyChinese(s=''){const zh=(s.match(/[\u3400-\u9fff]/g)||[]).length;return zh>=Math.max(4,s.length*0.12)}
+async function translateTitle(title){
+ if(mostlyChinese(title))return title;
+ try{
+  const u='https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-TW&dt=t&q='+encodeURIComponent(title);
+  const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.3'}});
+  if(!r.ok)return title;
+  const j=await r.json();
+  const t=(j?.[0]||[]).map(x=>x?.[0]||'').join('').trim();
+  return t||title;
+ }catch{return title}
+}
 export default async()=>{
- const q='("Federal Reserve" OR Powell OR inflation OR CPI OR PCE OR payroll OR jobs OR Nvidia OR Nasdaq OR tariff OR "Treasury yield") when:1d';
+ const qzh='(聯準會 OR 鮑爾 OR 通膨 OR CPI OR PCE OR 非農 OR 就業 OR 輝達 OR Nasdaq OR 關稅 OR 美債殖利率) when:1d';
+ const qen='("Federal Reserve" OR Powell OR inflation OR CPI OR PCE OR payroll OR jobs OR Nvidia OR Nasdaq OR tariff OR "Treasury yield") when:1d';
  const feeds=[
-  'https://news.google.com/rss/search?q='+encodeURIComponent(q)+'&hl=en-US&gl=US&ceid=US:en',
-  'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en',
+  'https://news.google.com/rss/search?q='+encodeURIComponent(qzh)+'&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
+  'https://news.google.com/rss/search?q='+encodeURIComponent(qen)+'&hl=en-US&gl=US&ceid=US:en',
   'https://www.cnbc.com/id/100003114/device/rss/rss.html'
  ];
- let rows=[],errors=[];
+ let rows=[];
  for(const u of feeds){
   try{
-   const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.2'}});
-   if(!r.ok){errors.push(u+' '+r.status);continue}
-   rows.push(...parseRSS(await r.text()));
-  }catch(e){errors.push(String(e.message||e))}
+   const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.3'}});
+   if(r.ok)rows.push(...parseRSS(await r.text()));
+  }catch{}
  }
- const seen=new Set(),out=[];
+ const seen=new Set(),picked=[];
  for(const a of rows.sort((a,b)=>b.score-a.score||String(b.published).localeCompare(String(a.published)))){
-  const k=a.title.toLowerCase().replace(/[^a-z0-9]+/g,'').slice(0,90);
-  if(seen.has(k))continue;seen.add(k);out.push(a);if(out.length===5)break;
+  const k=a.title.toLowerCase().replace(/[^a-z0-9\u3400-\u9fff]+/g,'').slice(0,90);
+  if(seen.has(k))continue;seen.add(k);picked.push(a);if(picked.length===5)break;
  }
- return J({updatedAt:new Date().toISOString(),headlines:out,debug:out.length?undefined:errors});
+ const headlines=[];
+ for(const a of picked){
+  headlines.push({...a,title:await translateTitle(a.title)});
+ }
+ return J({updatedAt:new Date().toISOString(),headlines});
 }
