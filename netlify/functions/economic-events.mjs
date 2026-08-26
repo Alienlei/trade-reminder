@@ -1,11 +1,30 @@
-const M={January:0,February:1,March:2,April:3,May:4,June:5,July:6,August:7,September:8,October:9,November:10,December:11};
 const J=x=>new Response(JSON.stringify(x),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'public,max-age=1800'}});
-function nth(y,m,w,n){let f=new Date(Date.UTC(y,m,1)).getUTCDay();return 1+((w-f+7)%7)+7*(n-1)}
-function off(y,m,d){let a=nth(y,2,0,2),b=nth(y,10,0,1),dst=(m>2&&m<10)||(m===2&&d>=a)||(m===10&&d<b);return dst?-4:-5}
-function iso(y,m,d,h,mi){return new Date(Date.UTC(y,m,d,h-off(y,m,d),mi)).toISOString()}
-function cls(n){n=n.toLowerCase();if(n.includes('consumer price index'))return['CPI','CPI 消費者物價指數'];if(n.includes('producer price index'))return['PPI','PPI 生產者物價指數'];if(n.includes('employment situation'))return['NFP','非農就業 NFP / 失業率'];if(n.includes('job openings')||n.includes('labor turnover'))return['JOLTS','JOLTS 職缺報告'];return null}
-function bls(t){t=t.replace(/\r?\n[ \t]/g,'');let out=[];for(const p of t.split('BEGIN:VEVENT').slice(1)){let s=p.match(/SUMMARY:(.+)/),d=p.match(/DTSTART(?:;TZID=[^:]+)?:([0-9]{8})T?([0-9]{4,6})?/);if(!s||!d)continue;let c=cls(s[1]);if(!c)continue;let ds=d[1],ts=d[2]||'083000';out.push({type:c[0],name:c[1],source:'BLS',time:iso(+ds.slice(0,4),+ds.slice(4,6)-1,+ds.slice(6,8),+ts.slice(0,2),+ts.slice(2,4))})}return out}
-function strip(h){return h.replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/\s+/g,' ').trim()}
-function bea(h){let out=[],y=new Date().getUTCFullYear();for(const r of h.match(/<tr[\s\S]*?<\/tr>/gi)||[]){let t=strip(r),d=t.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s+(\d{1,2}):(\d{2})\s+(AM|PM)/i);if(!d)continue;let hh=+d[3];if(d[5].toUpperCase()==='PM'&&hh!==12)hh+=12;if(d[5].toUpperCase()==='AM'&&hh===12)hh=0;let type,name;if(/Personal Income and Outlays/i.test(t)){type='PCE';name='PCE / 個人所得與支出'}else if(/\bGDP\b/i.test(t)){type='GDP';name='GDP 國內生產毛額'}else continue;out.push({type,name,source:'BEA',time:iso(y,M[d[1]],+d[2],hh,+d[4])})}return out}
-function fed(){let a={2026:[[8,16],[9,28],[11,9]],2027:[[0,27],[2,17],[3,28],[5,9],[6,28],[8,15],[9,27],[11,8]]},o=[];for(const y in a)for(const [m,d] of a[y]){o.push({type:'FOMC',name:'FOMC 利率決議',source:'Federal Reserve',time:iso(+y,m,d,14,0)},{type:'FOMC',name:'FOMC 記者會',source:'Federal Reserve',time:iso(+y,m,d,14,30)})}return o}
-export default async()=>{let e=[];try{let [b,a]=await Promise.all([fetch('https://www.bls.gov/schedule/news_release/bls.ics'),fetch('https://www.bea.gov/news/schedule')]);if(b.ok)e.push(...bls(await b.text()));if(a.ok)e.push(...bea(await a.text()))}catch{}e.push(...fed());return J({updatedAt:new Date().toISOString(),events:e.sort((a,b)=>a.time.localeCompare(b.time))})}
+const MON={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+function nth(y,m,w,n){const f=new Date(Date.UTC(y,m,1)).getUTCDay();return 1+((w-f+7)%7)+7*(n-1)}
+function off(y,m,d){const a=nth(y,2,0,2),b=nth(y,10,0,1);const dst=(m>2&&m<10)||(m===2&&d>=a)||(m===10&&d<b);return dst?-4:-5}
+function isoNY(y,m,d,h,mi){return new Date(Date.UTC(y,m,d,h-off(y,m,d),mi)).toISOString()}
+function clean(h){return h.replace(/<script[\s\S]*?<\/script>/gi,' ').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&').replace(/\s+/g,' ').trim()}
+function parseBLS(html,type,name){
+ const t=clean(html),out=[],re=/([A-Z][a-z]{2})\.\s+(\d{1,2}),\s+(20\d{2})\s+(\d{1,2}):(\d{2})\s+(AM|PM)/g;let m;
+ while((m=re.exec(t))){let h=+m[4];if(m[6]==='PM'&&h!==12)h+=12;if(m[6]==='AM'&&h===12)h=0;out.push({type,name,source:'BLS',time:isoNY(+m[3],MON[m[1]],+m[2],h,+m[5])})}
+ return out;
+}
+function fed(){
+ const a={2026:[[8,16],[9,28],[11,9]],2027:[[0,27],[2,17],[3,28],[5,9],[6,28],[8,15],[9,27],[11,8]]},o=[];
+ for(const y in a)for(const [m,d] of a[y]){o.push({type:'FOMC',name:'FOMC 利率決議',source:'Federal Reserve',time:isoNY(+y,m,d,14,0)},{type:'FOMC',name:'FOMC 記者會',source:'Federal Reserve',time:isoNY(+y,m,d,14,30)})}
+ return o;
+}
+function parseBEA(html){
+ const t=clean(html),out=[],y=new Date().getUTCFullYear(),months={January:0,February:1,March:2,April:3,May:4,June:5,July:6,August:7,September:8,October:9,November:10,December:11};
+ const re=/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s+(\d{1,2}):(\d{2})\s+(AM|PM)[\s\S]{0,220}?(Gross Domestic Product|Personal Income and Outlays|GDP)/gi;let m;
+ while((m=re.exec(t))){let h=+m[3];if(m[5].toUpperCase()==='PM'&&h!==12)h+=12;if(m[5].toUpperCase()==='AM'&&h===12)h=0;let v=/Personal Income/i.test(m[6])?{type:'PCE',name:'PCE / 個人所得與支出'}:{type:'GDP',name:'GDP 國內生產毛額'};out.push({...v,source:'BEA',time:isoNY(y,months[m[1]],+m[2],h,+m[4])})}
+ return out;
+}
+export default async()=>{
+ let events=[];
+ const src=[['https://www.bls.gov/schedule/news_release/cpi.htm','CPI','CPI 消費者物價指數'],['https://www.bls.gov/schedule/news_release/ppi.htm','PPI','PPI 生產者物價指數'],['https://www.bls.gov/schedule/news_release/empsit.htm','NFP','非農就業 NFP / 失業率'],['https://www.bls.gov/schedule/news_release/jolts.htm','JOLTS','JOLTS 職缺報告']];
+ for(const [u,t,n] of src){try{const r=await fetch(u,{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.1'}});if(r.ok)events.push(...parseBLS(await r.text(),t,n))}catch{}}
+ try{const r=await fetch('https://www.bea.gov/news/schedule',{headers:{'user-agent':'Mozilla/5.0 TradeReminder/2.0.1'}});if(r.ok)events.push(...parseBEA(await r.text()))}catch{}
+ events.push(...fed());const seen=new Set();events=events.filter(e=>{const k=e.type+'|'+e.time;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>a.time.localeCompare(b.time));
+ return J({updatedAt:new Date().toISOString(),events});
+}
