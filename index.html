@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>交易小提醒 V2.0</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+:root{--bg:#080d19;--card:#151e31;--line:#28344b;--text:#f8fafc;--muted:#9aa8bc;--accent:#38bdf8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
+main{max-width:760px;margin:auto;padding:16px 14px 46px}.top,.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-size:24px;margin:2px 0}h2{font-size:18px;margin:0}.muted{color:var(--muted);font-size:14px}.tiny{font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}.badge{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:13px;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:14px}.tabs button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:#0e1525;color:var(--text)}
+.tabs button.active{background:var(--accent);color:#05121d;font-weight:800}.pane{display:none}.pane.active{display:block}.big{font-size:30px;font-weight:800}.title{font-weight:750}
+.event,.headline,.setting{padding:12px 0;border-top:1px solid var(--line)}.event:first-child,.headline:first-child,.setting:first-child{border-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pillbar{display:flex;flex-wrap:wrap;gap:7px}
+label{display:block;color:var(--muted);font-size:13px}input,select{width:100%;min-height:46px;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:#0d1524;color:var(--text);padding:10px 11px;font-size:16px}
+button{font:inherit}.primary,.secondary{min-height:46px;border-radius:12px;padding:10px 12px;font-weight:800}.primary{width:100%;background:var(--accent);color:#05121d;border:0}.secondary{background:#0d1524;color:var(--text);border:1px solid var(--line)}
+.result{border:1px solid var(--line);border-radius:13px;padding:12px}.hidden{display:none!important}.pill{border:1px solid var(--line);background:#0d1524;color:var(--text);padding:8px 11px;border-radius:999px}.pill.on{border-color:var(--accent)}
+a{color:var(--accent);text-decoration:none}
+@media(max-width:480px){.tabs button{font-size:13px}.big{font-size:26px}}
+</style>
+</head>
+<body><main>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.0</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<nav class="tabs">
+<button data-tab="todayPane" class="active">今天</button>
+<button data-tab="newsPane">重點頭條</button>
+<button data-tab="calcPane">計算器</button>
+<button data-tab="settingsPane">設定</button>
+</nav>
+
+<section id="todayPane" class="pane active">
+<div class="card"><div class="muted">下一個重大事件</div><div id="nextName" class="title" style="font-size:20px;margin-top:7px">載入中…</div><div id="nextTime" class="muted" style="margin-top:5px">—</div><div class="row" style="margin-top:14px"><div><div class="tiny">距離事件</div><div id="countdown" class="big">—</div></div><div id="guard" class="badge">—</div></div></div>
+<div class="card"><div class="row"><div><h2>近期交易日曆</h2><div class="muted">重大數據、FOMC、換月與結算</div></div><button id="refreshEvents" class="secondary">更新</button></div><div id="events"></div></div>
+<div class="card"><div class="row"><div><h2>今日重點頭條</h2><div class="muted">每天最多 5 條</div></div><button id="openNews" class="secondary">查看</button></div><div id="headlineTeaser" class="muted" style="margin-top:10px">正在整理今日市場焦點…</div></div>
+</section>
+
+<section id="newsPane" class="pane">
+<div class="card"><div class="row"><div><h2>重點頭條</h2><div class="muted">只保留交易者值得知道的 5 條</div></div><button id="refreshNews" class="secondary">更新</button></div><div id="headlines"></div></div>
+</section>
+
+<section id="calcPane" class="pane">
+<div class="card"><h2>快速風報比 / 損益</h2><form id="calc" style="margin-top:14px"><div class="grid2">
+<label>商品<select id="symbol"><option>MNQ</option><option>NQ</option><option>MES</option><option>ES</option><option value="MTX">微台</option><option value="TX">小台</option></select></label>
+<label>方向<select id="direction"><option value="long">做多</option><option value="short">做空</option></select></label>
+<label>進場價<input id="entry" inputmode="decimal"></label><label>口數<input id="qty" inputmode="numeric" value="1"></label>
+<label>停損價<input id="stop" inputmode="decimal"></label><label>停利價<input id="target" inputmode="decimal"></label>
+<label>單口來回手續費<input id="fee" inputmode="decimal" value="0"></label><label>最低 RR<input id="minRR" inputmode="decimal" value="2"></label>
+</div><button class="primary" type="submit" style="margin-top:12px">立即計算</button><div id="calcErr" class="hidden" style="margin-top:10px"></div></form>
+<div id="results" class="hidden" style="margin-top:14px"><div class="grid2">
+<div class="result"><div class="tiny">最大風險</div><div id="riskPts" class="title"></div><div id="riskCash" class="muted"></div></div>
+<div class="result"><div class="tiny">潛在獲利</div><div id="rewardPts" class="title"></div><div id="rewardCash" class="muted"></div></div>
+<div class="result"><div class="tiny">停損後淨損益</div><div id="netLoss" class="title"></div></div>
+<div class="result"><div class="tiny">停利後淨損益</div><div id="netWin" class="title"></div></div></div>
+<div class="result" style="text-align:center;margin-top:10px"><div class="tiny">風報比</div><div id="rr" class="big">—</div><div id="rrMsg"></div></div></div>
+</div>
+<div class="card"><h2>反算最大可下口數</h2><form id="sizeCalc" style="margin-top:12px"><div class="grid2">
+<label>商品<select id="sizeSymbol"><option>MNQ</option><option>NQ</option><option>MES</option><option>ES</option><option value="MTX">微台</option><option value="TX">小台</option></select></label>
+<label>最大可承受虧損<input id="maxRisk" inputmode="decimal"></label><label>停損點數<input id="stopPoints" inputmode="decimal"></label><label>單口來回手續費<input id="sizeFee" inputmode="decimal" value="0"></label>
+</div><button class="secondary" type="submit" style="width:100%;margin-top:12px">計算口數</button></form><div id="sizeResult" class="hidden" style="margin-top:12px"></div></div>
+</section>
+
+<section id="settingsPane" class="pane">
+<div class="card"><div class="row"><div><h2>帳號</h2><div id="authState" class="muted">目前使用訪客模式</div></div><button id="googleLogin" class="secondary">Google 登入</button></div><div id="firebaseHint" class="tiny" style="margin-top:8px">未設定 Firebase 時，設定仍會保存在這支手機。</div></div>
+<div class="card"><h2>提醒設定</h2><div class="setting"><label>預設重大事件提醒<select id="defaultReminder"><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label></div>
+<div class="setting"><div class="title">個別事件覆寫</div><div id="eventOverrides"></div></div>
+<div class="setting"><button id="enablePush" class="primary" type="button">開啟手機通知</button><div id="pushState" class="tiny" style="margin-top:8px">Push 需完成 Firebase 設定。</div></div></div>
+<div class="card"><h2>交易偏好</h2><div class="setting"><div class="muted">我交易的商品</div><div id="products" class="pillbar" style="margin-top:8px"></div></div>
+<div class="grid2 setting"><label>最低 RR<input id="settingRR" value="2"></label><label>預設單口手續費<input id="settingFee" value="0"></label></div><button id="saveSettings" class="secondary" style="width:100%" type="button">儲存設定</button></div>
+</section>
+<div class="tiny" style="margin-top:18px">事件來源：BLS、BEA、Federal Reserve 公開時程；換月與台指結算含規則式計算。非投資建議。</div>
+</main>
+
+<script type="module">
+const $=id=>document.getElementById(id),TZ='Asia/Taipei';
+const SPECS={MNQ:{point:2,c:'US$'},NQ:{point:20,c:'US$'},MES:{point:5,c:'US$'},ES:{point:50,c:'US$'},MTX:{point:10,c:'NT$'},TX:{point:50,c:'NT$'}};
+const TYPES=['CPI','PPI','NFP','JOLTS','PCE','GDP','FOMC','RETAIL'],DEF={defaultReminder:'60',minRR:'2',fee:'0',products:['MNQ'],overrides:{}};
+let settings={...DEF,...JSON.parse(localStorage.getItem('tradeSettings')||'{}')},events=[],firebaseApi=null;
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=d=>new Intl.DateTimeFormat('zh-TW',{timeZone:TZ,month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+const dur=ms=>{if(ms<=0)return'已發生';let m=Math.floor(ms/60000),d=Math.floor(m/1440),h=Math.floor((m%1440)/60),mm=m%60;return d?`${d}天 ${h}小時`:`${h}小時 ${mm}分`};
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('active',x.id===b.dataset.tab));document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b))});
+$('openNews').onclick=()=>document.querySelector('[data-tab="newsPane"]').click();
+
+function nth(y,m,w,n){let f=new Date(Date.UTC(y,m,1)),day=1+((w-f.getUTCDay()+7)%7)+7*(n-1);return new Date(Date.UTC(y,m,day,4))}
+function rules(){let out=[],y0=new Date().getUTCFullYear();for(let y=y0;y<=y0+2;y++){for(const m of [2,5,8,11]){let exp=nth(y,m,5,3),roll=new Date(exp);roll.setUTCDate(exp.getUTCDate()-4);out.push({name:'MNQ / NQ 慣例換月',source:'CME 規則',time:roll.toISOString()},{name:'MNQ / NQ 季月合約到期',source:'CME 規則',time:exp.toISOString()})}for(let m=0;m<12;m++){let d=nth(y,m,3,3);out.push({name:'台指 / 微台月結算',source:'第三個星期三規則',time:d.toISOString()})}}return out}
+
+async function loadEvents(){try{let r=await fetch('/.netlify/functions/economic-events',{cache:'no-store'}),j=await r.json();events=[...(j.events||[]),...rules()]}catch{events=rules()}events=events.map(e=>({...e,d:new Date(e.time)})).filter(e=>!isNaN(e.d)).sort((a,b)=>a.d-b.d);renderEvents();tick()}
+function renderEvents(){let now=new Date(),list=events.filter(e=>e.d>now).slice(0,12);$('events').innerHTML=list.map(e=>`<div class="event"><div class="row"><div><div class="title">${esc(e.name)}</div><div class="tiny">${esc(e.source)}</div></div><div style="text-align:right"><div>${fmt(e.d)}</div><div class="tiny">${dur(e.d-now)}</div></div></div></div>`).join('')||'<div class="event muted">目前沒有未來事件。</div>'}
+function tick(){let now=new Date();$('now').textContent='台灣時間｜'+new Intl.DateTimeFormat('zh-TW',{timeZone:TZ,year:'numeric',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(now);let n=events.find(e=>e.d>now);if(!n)return;let min=(n.d-now)/60000;$('nextName').textContent=n.name;$('nextTime').textContent=fmt(n.d)+'｜'+n.source;$('countdown').textContent=dur(n.d-now);$('marketBadge').textContent=min<=30?'⚠️ 交易警戒':min<=120?'注意事件':'目前無近端事件';$('guard').textContent=min<=30?'30分鐘內':min<=120?'2小時內':'尚有距離'}
+async function loadNews(){try{let r=await fetch('/.netlify/functions/headlines',{cache:'no-store'}),j=await r.json(),a=(j.headlines||[]).slice(0,5);$('headlines').innerHTML=a.map((x,i)=>`<div class="headline"><div class="tiny">#${i+1}｜${esc(x.domain)}</div><div class="title">${esc(x.title)}</div><div class="muted">${esc(x.why)}</div><a target="_blank" rel="noopener" href="${x.url}">查看來源 ↗</a></div>`).join('')||'<div class="headline muted">目前沒有足夠重要的頭條。</div>';$('headlineTeaser').textContent=a.length?`今日已整理 ${a.length} 條重點頭條。`:'今日暫無足夠重要頭條。'}catch{$('headlines').innerHTML='<div class="headline muted">新聞來源暫時無法讀取。</div>'}}
+$('refreshEvents').onclick=loadEvents;$('refreshNews').onclick=loadNews;
+
+$('calc').onsubmit=e=>{e.preventDefault();let s=SPECS[$('symbol').value],dir=$('direction').value,en=+$('entry').value,st=+$('stop').value,ta=+$('target').value,q=Math.floor(+$('qty').value),fee=Math.max(0,+$('fee').value||0),min=Math.max(0,+$('minRR').value||0);if(!(en>0&&st>0&&ta>0&&q>0))return;let ok=dir==='long'?(st<en&&ta>en):(st>en&&ta<en);if(!ok){$('calcErr').textContent='停損／停利方向不正確。';$('calcErr').classList.remove('hidden');return}$('calcErr').classList.add('hidden');let rp=Math.abs(en-st),wp=Math.abs(ta-en),risk=rp*s.point*q,reward=wp*s.point*q,rr=wp/rp,tf=fee*q;$('riskPts').textContent=rp+' 點';$('riskCash').textContent=s.c+risk.toLocaleString();$('rewardPts').textContent=wp+' 點';$('rewardCash').textContent=s.c+reward.toLocaleString();$('netLoss').textContent='-'+s.c+(risk+tf).toLocaleString();$('netWin').textContent=s.c+Math.max(0,reward-tf).toLocaleString();$('rr').textContent=rr.toFixed(2)+'R';$('rrMsg').textContent=rr>=min?'✅ 達標':'⚠️ 未達標';$('results').classList.remove('hidden')};
+$('sizeCalc').onsubmit=e=>{e.preventDefault();let s=SPECS[$('sizeSymbol').value],max=+$('maxRisk').value,pts=+$('stopPoints').value,fee=Math.max(0,+$('sizeFee').value||0);if(!(max>0&&pts>0))return;$('sizeResult').textContent=`最多約 ${Math.max(0,Math.floor(max/(pts*s.point+fee)))} 口`;$('sizeResult').classList.remove('hidden')};
+
+function renderSettings(){$('defaultReminder').value=settings.defaultReminder;$('settingRR').value=settings.minRR;$('settingFee').value=settings.fee;$('fee').value=settings.fee;$('minRR').value=settings.minRR;$('eventOverrides').innerHTML=TYPES.map(t=>`<label style="margin-top:8px">${t}<select data-ov="${t}"><option value="">沿用預設</option><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label>`).join('');document.querySelectorAll('[data-ov]').forEach(s=>s.value=settings.overrides?.[s.dataset.ov]??'');$('products').innerHTML=Object.keys(SPECS).map(p=>`<button class="pill ${(settings.products||[]).includes(p)?'on':''}" data-p="${p}" type="button">${p}</button>`).join('');document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>b.classList.toggle('on'))}
+$('saveSettings').onclick=()=>{settings.defaultReminder=$('defaultReminder').value;settings.minRR=$('settingRR').value;settings.fee=$('settingFee').value;settings.products=[...document.querySelectorAll('[data-p].on')].map(x=>x.dataset.p);settings.overrides={};document.querySelectorAll('[data-ov]').forEach(s=>{if(s.value!=='')settings.overrides[s.dataset.ov]=s.value});localStorage.setItem('tradeSettings',JSON.stringify(settings));alert('設定已儲存')};
+
+async function initFirebase(){try{let cfg=await import('/firebase-config.js');if(String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw Error();$('firebaseHint').textContent='Firebase 設定已填入；下一步啟用 Google 登入與 Push。'}catch{$('googleLogin').disabled=true;$('googleLogin').textContent='待設定 Firebase';$('firebaseHint').textContent='Google 登入與 Push 需下一步填入你的 Firebase 專案金鑰。'}}
+$('enablePush').onclick=()=>{$('pushState').textContent='下一步完成 Firebase 後即可啟用背景通知。'};
+renderSettings();loadEvents();loadNews();setInterval(tick,30000);if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});initFirebase();
+</script>
+</body></html>
