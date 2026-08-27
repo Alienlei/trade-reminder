@@ -54,7 +54,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 </style>
 </head>
 <body><main>
-<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.6-debug</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.7-debug</div></div><div id="marketBadge" class="badge">讀取中</div></div>
 <nav class="tabs">
 <button data-tab="todayPane" class="active">今天</button>
 <button data-tab="newsPane">重點頭條</button>
@@ -162,7 +162,7 @@ function renderThemes(active=localStorage.getItem('tradeTheme')||'navy'){
 let messagingApi=null;
 async function initFirebase(){
  try{
-   const cfg=await import('/firebase-config.js?v=215');
+   const cfg=await import('/firebase-config.js?v=217');
    if(!cfg.firebaseConfig?.apiKey || String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw new Error('config missing');
    const [{initializeApp},{getMessaging,getToken,onMessage}]=await Promise.all([
      import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
@@ -219,7 +219,7 @@ async function enablePush(){
   const permission=await Notification.requestPermission();
   if(permission!=='granted'){ $('pushState').textContent='通知權限未允許。'; return; }
 
-  const reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=215',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=217',{scope:'/'});
   await navigator.serviceWorker.ready;
 
   $('pushState').textContent='正在向 Firebase 重新註冊這台裝置…';

@@ -1,6 +1,5 @@
-V2.1.6-debug
-- 不改 Google Cloud / Firebase 設定。
-- 顯示瀏覽器實際讀到的 projectId / appId / senderId。
-- API key 與 VAPID 只顯示部分字元。
-- 顯示目前 service worker URL。
-- Push 失敗時追加 lastError。
+V2.1.7 Firebase Config Force Fix
+- 強制覆蓋 firebase-config.js 為 trade-reminder-d1990 正確 Browser key。
+- 強制覆蓋 firebase-config-sw.js。
+- Service worker 改為 v=217。
+- Debug 保留，方便確認網站實際讀到的 key。
