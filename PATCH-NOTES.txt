@@ -1,5 +1,6 @@
-V2.1.4
-- Firebase API key corrected to the Browser key auto-created by Firebase
-  in the actual Firebase project: trade-reminder-d1990.
-- Firebase project ID, app ID, sender ID and public VAPID key are unchanged.
-- Themes, news and Push frontend logic are unchanged.
+V2.1.5 Cache Reset
+- 強制 Firebase config 使用 v=215。
+- 強制 Firebase Messaging service worker 使用 v=215。
+- 開啟 Push 前會移除舊 messaging service worker。
+- 清除舊 fcmToken / pushEnabled，再重新取得 token。
+- Firebase 專案維持正確的 trade-reminder-d1990。

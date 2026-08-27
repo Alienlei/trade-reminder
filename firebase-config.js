@@ -6,5 +6,4 @@ export const firebaseConfig = {
   messagingSenderId: "120974942710",
   appId: "1:120974942710:web:56d677b5d5273fdfbf67d7"
 };
-
 export const vapidKey = "BFRj9xBHdM6u198n-IRwvSJnnVcjkcFNiryoCTWq4KsAi1e8GPVuyXomawIyqTMdrTRPzYT0EGgWU7grE39NgmQ";
