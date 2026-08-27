@@ -1,6 +1,5 @@
-V2.1.6 DEBUG
-- Does not change Firebase project/key/VAPID.
-- Shows the exact Firebase initialization error.
-- Checks HTTPS secure context, Notification, Service Worker, PushManager,
-  IndexedDB, Firebase module imports, and messaging isSupported().
-- Use this only to diagnose why initFirebase fails before Push registration.
+V2.1.7 FCM KEY TEST
+- Only Firebase apiKey changed to trade-reminder-fcm-web.
+- projectId remains trade-reminder-d1990.
+- appId, senderId and VAPID unchanged.
+- Debug panel remains enabled.

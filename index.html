@@ -54,7 +54,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 </style>
 </head>
 <body><main>
-<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.6-debug</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.7-fcm-test</div></div><div id="marketBadge" class="badge">讀取中</div></div>
 <nav class="tabs">
 <button data-tab="todayPane" class="active">今天</button>
 <button data-tab="newsPane">重點頭條</button>
@@ -168,7 +168,7 @@ async function initFirebase(){
    dbg.push('PushManager: '+String('PushManager' in window));
    dbg.push('indexedDB: '+String('indexedDB' in window));
 
-   const cfg=await import('/firebase-config.js?v=216');
+   const cfg=await import('/firebase-config.js?v=217');
    dbg.push('config loaded: yes');
    dbg.push('projectId: '+cfg.firebaseConfig?.projectId);
    dbg.push('appId: '+cfg.firebaseConfig?.appId);
