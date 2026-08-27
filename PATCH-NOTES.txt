@@ -1,4 +1,5 @@
-V2.1.3
-- Replaced the invalid Firebase Web API key with the new trade-reminder-web key.
-- Other Firebase identifiers and the public VAPID key are unchanged.
-- Upload these files to the repository root and commit to main.
+V2.1.4
+- Firebase API key corrected to the Browser key auto-created by Firebase
+  in the actual Firebase project: trade-reminder-d1990.
+- Firebase project ID, app ID, sender ID and public VAPID key are unchanged.
+- Themes, news and Push frontend logic are unchanged.
