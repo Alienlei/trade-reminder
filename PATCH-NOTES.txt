@@ -1,5 +1,5 @@
-V2.1.7 FCM KEY TEST
-- Only Firebase apiKey changed to trade-reminder-fcm-web.
-- projectId remains trade-reminder-d1990.
-- appId, senderId and VAPID unchanged.
+V2.1.8
+- Corrected Firebase API key character case exactly as shown in Firebase Console.
+- Correct key: AIzaSyCUiJTauCE_Rm0p_wZlcG3HDWm5y7thJWA
+- No other Firebase project/app/VAPID/Push logic changes.
 - Debug panel remains enabled.
