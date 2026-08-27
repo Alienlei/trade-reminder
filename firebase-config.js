@@ -1,5 +1,5 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSyCUiJTaucE_Rm0p_wZlcG3HDWm5y7thJWA",
+  apiKey: "AIzaSyC-Slaqb_Q9U9f3tDJtDofFbLLtgy-K39Q",
   authDomain: "trade-reminder-d1990.firebaseapp.com",
   projectId: "trade-reminder-d1990",
   storageBucket: "trade-reminder-d1990.firebasestorage.app",

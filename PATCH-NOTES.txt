@@ -1,6 +1,5 @@
-V2.1.5 Cache Reset
-- 強制 Firebase config 使用 v=215。
-- 強制 Firebase Messaging service worker 使用 v=215。
-- 開啟 Push 前會移除舊 messaging service worker。
-- 清除舊 fcmToken / pushEnabled，再重新取得 token。
-- Firebase 專案維持正確的 trade-reminder-d1990。
+V2.1.6
+- Uses a newly created API key inside the correct Firebase/Google Cloud project: trade-reminder-d1990.
+- API key restrictions: Firebase Installations API + FCM Registration API.
+- Cache-busting bumped to v=216.
+- Existing Firebase appId and VAPID key unchanged for this test.
