@@ -54,7 +54,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 </style>
 </head>
 <body><main>
-<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.7-debug</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.6-debug</div></div><div id="marketBadge" class="badge">讀取中</div></div>
 <nav class="tabs">
 <button data-tab="todayPane" class="active">今天</button>
 <button data-tab="newsPane">重點頭條</button>
@@ -100,9 +100,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 <div class="tiny" style="margin-top:10px">目前先全部開放測試；之後可把特別色改為付費解鎖。</div></div>
 <div class="card"><h2>提醒設定</h2><div class="setting"><label>預設重大事件提醒<select id="defaultReminder"><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label></div>
 <div class="setting"><div class="title">個別事件覆寫</div><div id="eventOverrides"></div></div>
-<div class="setting"><button id="enablePush" class="primary" type="button">開啟手機通知</button><div id="pushState" class="tiny" style="margin-top:8px">Push 需完成 Firebase 設定。</div>
-<div id="firebaseDebug" class="tiny" style="margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:10px;white-space:pre-wrap;word-break:break-word;display:none"></div>
-</div></div>
+<div class="setting"><button id="enablePush" class="primary" type="button">開啟手機通知</button><div id="pushState" class="tiny" style="margin-top:8px">Push 需完成 Firebase 設定。</div><pre id="firebaseDebug" class="tiny" style="margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:12px;white-space:pre-wrap;word-break:break-word">DEBUG Firebase\n等待初始化…</pre></div></div>
 <div class="card"><h2>交易偏好</h2><div class="setting"><div class="muted">我交易的商品</div><div id="products" class="pillbar" style="margin-top:8px"></div></div>
 <div class="grid2 setting"><label>最低 RR<input id="settingRR" value="2"></label><label>預設單口手續費<input id="settingFee" value="0"></label></div><button id="saveSettings" class="secondary" style="width:100%" type="button">儲存設定</button></div>
 </section>
@@ -161,45 +159,67 @@ function renderThemes(active=localStorage.getItem('tradeTheme')||'navy'){
 
 let messagingApi=null;
 async function initFirebase(){
+ const dbg=[];
  try{
-   const cfg=await import('/firebase-config.js?v=217');
+   dbg.push('origin: '+location.origin);
+   dbg.push('secureContext: '+String(window.isSecureContext));
+   dbg.push('Notification: '+String('Notification' in window));
+   dbg.push('serviceWorker API: '+String('serviceWorker' in navigator));
+   dbg.push('PushManager: '+String('PushManager' in window));
+   dbg.push('indexedDB: '+String('indexedDB' in window));
+
+   const cfg=await import('/firebase-config.js?v=216');
+   dbg.push('config loaded: yes');
+   dbg.push('projectId: '+cfg.firebaseConfig?.projectId);
+   dbg.push('appId: '+cfg.firebaseConfig?.appId);
+   dbg.push('senderId: '+cfg.firebaseConfig?.messagingSenderId);
+   dbg.push('apiKey: '+String(cfg.firebaseConfig?.apiKey||'').slice(0,10)+'…'+String(cfg.firebaseConfig?.apiKey||'').slice(-4));
+   dbg.push('vapid: '+String(cfg.vapidKey||'').slice(0,10)+'…'+String(cfg.vapidKey||'').slice(-6));
+
    if(!cfg.firebaseConfig?.apiKey || String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw new Error('config missing');
-   const [{initializeApp},{getMessaging,getToken,onMessage}]=await Promise.all([
-     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
-     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js')
-   ]);
-   const app=initializeApp(cfg.firebaseConfig);
-   const messaging=getMessaging(app);
-   messagingApi={messaging,getToken,onMessage,vapidKey:cfg.vapidKey};
-   const safeKey=cfg.firebaseConfig.apiKey
-     ? cfg.firebaseConfig.apiKey.slice(0,10)+'…'+cfg.firebaseConfig.apiKey.slice(-4)
-     : '(missing)';
-   const regs=await navigator.serviceWorker.getRegistrations();
-   const sws=regs.map(r=>r.active?.scriptURL||r.waiting?.scriptURL||r.installing?.scriptURL||'(no script)').join('\n');
-   $('firebaseDebug').style.display='block';
-   $('firebaseDebug').textContent=[
-     'DEBUG Firebase',
-     'origin: '+location.origin,
-     'projectId: '+cfg.firebaseConfig.projectId,
-     'appId: '+cfg.firebaseConfig.appId,
-     'senderId: '+cfg.firebaseConfig.messagingSenderId,
-     'apiKey: '+safeKey,
-     'vapid: '+(cfg.vapidKey ? cfg.vapidKey.slice(0,12)+'…'+cfg.vapidKey.slice(-6) : '(missing)'),
-     'serviceWorkers:',
-     sws||'(none)'
-   ].join('\n');
+
+   const appMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js');
+   dbg.push('firebase-app import: ok');
+
+   const msgMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js');
+   dbg.push('firebase-messaging import: ok');
+
+   const supported=await msgMod.isSupported();
+   dbg.push('messaging isSupported(): '+String(supported));
+   if(!supported) throw new Error('Firebase Messaging reports this browser/environment as unsupported');
+
+   const app=appMod.initializeApp(cfg.firebaseConfig);
+   dbg.push('initializeApp: ok');
+
+   const messaging=msgMod.getMessaging(app);
+   dbg.push('getMessaging: ok');
+
+   messagingApi={messaging,getToken:msgMod.getToken,onMessage:msgMod.onMessage,vapidKey:cfg.vapidKey};
    $('firebaseHint').textContent='Firebase 已連線，可啟用手機 Push。';
+   $('pushState').textContent='Firebase 已連線，請按「開啟手機通知」。';
    $('googleLogin').disabled=true;
    $('googleLogin').textContent='Google 登入稍後加入';
-   onMessage(messaging,payload=>{
+
+   msgMod.onMessage(messaging,payload=>{
      const title=payload?.notification?.title||'交易小提醒';
      const body=payload?.notification?.body||'收到新的交易提醒';
      $('pushState').textContent=`✅ 前景通知：${title}｜${body}`;
    });
+
+   const regs=await navigator.serviceWorker?.getRegistrations?.()||[];
+   dbg.push('serviceWorkers: '+(regs.length?regs.map(r=>r.active?.scriptURL||r.waiting?.scriptURL||'(installing)').join(' | '):'(none)'));
+   $('firebaseDebug').textContent='DEBUG Firebase\n'+dbg.join('\n');
  }catch(err){
-   $('googleLogin').disabled=true;$('googleLogin').textContent='待設定 Firebase';
-   $('firebaseHint').textContent='請先填入 firebase-config.js 與 VAPID 公開金鑰。';
    messagingApi=null;
+   dbg.push('ERROR name: '+(err?.name||''));
+   dbg.push('ERROR code: '+(err?.code||''));
+   dbg.push('ERROR message: '+(err?.message||String(err)));
+   dbg.push('ERROR stack: '+String(err?.stack||'').split('\n').slice(0,3).join(' | '));
+   $('googleLogin').disabled=true;
+   $('googleLogin').textContent='待設定 Firebase';
+   $('firebaseHint').textContent='Firebase 初始化失敗，請看下方 DEBUG。';
+   $('pushState').textContent='Push 尚未初始化；請看下方 DEBUG 錯誤。';
+   $('firebaseDebug').textContent='DEBUG Firebase\n'+dbg.join('\n');
  }
 }
 async function enablePush(){
@@ -219,7 +239,7 @@ async function enablePush(){
   const permission=await Notification.requestPermission();
   if(permission!=='granted'){ $('pushState').textContent='通知權限未允許。'; return; }
 
-  const reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=217',{scope:'/'});
+  const reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js?v=215',{scope:'/'});
   await navigator.serviceWorker.ready;
 
   $('pushState').textContent='正在向 Firebase 重新註冊這台裝置…';
@@ -235,10 +255,6 @@ async function enablePush(){
   $('enablePush').textContent='通知已開啟';
  }catch(err){
   $('pushState').textContent='Push 設定失敗：'+(err?.message||err);
-  if($('firebaseDebug')){
-    $('firebaseDebug').style.display='block';
-    $('firebaseDebug').textContent += '\nlastError: '+(err?.message||String(err));
-  }
  }finally{$('enablePush').disabled=false}
 }
 $('enablePush').onclick=enablePush;

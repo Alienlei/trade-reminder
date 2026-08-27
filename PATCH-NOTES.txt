@@ -1,5 +1,6 @@
-V2.1.7 Firebase Config Force Fix
-- 強制覆蓋 firebase-config.js 為 trade-reminder-d1990 正確 Browser key。
-- 強制覆蓋 firebase-config-sw.js。
-- Service worker 改為 v=217。
-- Debug 保留，方便確認網站實際讀到的 key。
+V2.1.6 DEBUG
+- Does not change Firebase project/key/VAPID.
+- Shows the exact Firebase initialization error.
+- Checks HTTPS secure context, Notification, Service Worker, PushManager,
+  IndexedDB, Firebase module imports, and messaging isSupported().
+- Use this only to diagnose why initFirebase fails before Push registration.
