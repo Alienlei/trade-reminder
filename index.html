@@ -5,28 +5,56 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>交易小提醒 V2.0</title>
+<title>交易小提醒 V2.1</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icon-192.png">
 <style>
-:root{--bg:#080d19;--card:#151e31;--line:#28344b;--text:#f8fafc;--muted:#9aa8bc;--accent:#38bdf8}
+:root{
+  --bg:#080d19;--card:#151e31;--card2:#0e1525;--field:#0d1524;
+  --line:#28344b;--text:#f8fafc;--muted:#9aa8bc;--accent:#38bdf8;
+  --accentText:#05121d;--shadow:0 10px 28px rgba(0,0,0,.16);--soft:#10192b;
+}
+html[data-theme="pink"]{
+  --bg:#fff3f6;--card:#fffafd;--card2:#fff1f6;--field:#fff8fb;
+  --line:#ffc8d7;--text:#633a2d;--muted:#8b6254;--accent:#ff5f93;
+  --accentText:#fff;--shadow:0 10px 28px rgba(244,87,139,.13);--soft:#ffe5ee;
+}
+html[data-theme="cream"]{
+  --bg:#fffaf1;--card:#fffefb;--card2:#fff5e8;--field:#fffaf4;
+  --line:#ead5bd;--text:#5d3827;--muted:#896c5b;--accent:#b8784f;
+  --accentText:#fff;--shadow:0 10px 28px rgba(148,93,57,.12);--soft:#f7ead8;
+}
+html[data-theme="mint"]{
+  --bg:#effff9;--card:#fbfffd;--card2:#e9fff7;--field:#f7fffb;
+  --line:#aee9d3;--text:#5f3b2c;--muted:#7f6559;--accent:#38c997;
+  --accentText:#fff;--shadow:0 10px 28px rgba(56,201,151,.13);--soft:#d9faed;
+}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
 main{max-width:760px;margin:auto;padding:16px 14px 46px}.top,.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
 h1{font-size:24px;margin:2px 0}h2{font-size:18px;margin:0}.muted{color:var(--muted);font-size:14px}.tiny{font-size:12px;color:var(--muted)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}.badge{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:13px;white-space:nowrap}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:14px}.tabs button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:#0e1525;color:var(--text)}
-.tabs button.active{background:var(--accent);color:#05121d;font-weight:800}.pane{display:none}.pane.active{display:block}.big{font-size:30px;font-weight:800}.title{font-weight:750}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px;box-shadow:var(--shadow)}.badge{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:13px;white-space:nowrap}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:14px}.tabs button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--card2);color:var(--text)}
+.tabs button.active{background:var(--accent);color:var(--accentText);font-weight:800}.pane{display:none}.pane.active{display:block}.big{font-size:30px;font-weight:800}.title{font-weight:750}
 .event,.headline,.setting{padding:12px 0;border-top:1px solid var(--line)}.event:first-child,.headline:first-child,.setting:first-child{border-top:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.pillbar{display:flex;flex-wrap:wrap;gap:7px}
-label{display:block;color:var(--muted);font-size:13px}input,select{width:100%;min-height:46px;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:#0d1524;color:var(--text);padding:10px 11px;font-size:16px}
-button{font:inherit}.primary,.secondary{min-height:46px;border-radius:12px;padding:10px 12px;font-weight:800}.primary{width:100%;background:var(--accent);color:#05121d;border:0}.secondary{background:#0d1524;color:var(--text);border:1px solid var(--line)}
-.result{border:1px solid var(--line);border-radius:13px;padding:12px}.hidden{display:none!important}.pill{border:1px solid var(--line);background:#0d1524;color:var(--text);padding:8px 11px;border-radius:999px}.pill.on{border-color:var(--accent)}
+label{display:block;color:var(--muted);font-size:13px}input,select{width:100%;min-height:46px;margin-top:6px;border:1px solid var(--line);border-radius:12px;background:var(--field);color:var(--text);padding:10px 11px;font-size:16px}
+button{font:inherit}.primary,.secondary{min-height:46px;border-radius:12px;padding:10px 12px;font-weight:800}.primary{width:100%;background:var(--accent);color:var(--accentText);border:0}.secondary{background:var(--field);color:var(--text);border:1px solid var(--line)}
+.result{border:1px solid var(--line);border-radius:13px;padding:12px}.hidden{display:none!important}.pill{border:1px solid var(--line);background:var(--field);color:var(--text);padding:8px 11px;border-radius:999px}.pill.on{border-color:var(--accent)}
 a{color:var(--accent);text-decoration:none}
+body,.card,.tabs button,input,select,.secondary,.pill{transition:background-color .25s,color .25s,border-color .25s}
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.theme-choice{position:relative;min-height:88px;text-align:left;border:2px solid var(--line);border-radius:16px;padding:12px;background:var(--field);color:var(--text)}
+.theme-choice.active{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 15%,transparent)}
+.theme-dots{display:flex;gap:5px;margin-top:9px}.theme-dots i{width:16px;height:16px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.08)}
+.theme-name{font-weight:800}.theme-note{font-size:12px;color:var(--muted);margin-top:3px}
+.pro-tag{position:absolute;right:9px;top:9px;font-size:10px;font-weight:800;padding:3px 6px;border-radius:999px;background:var(--soft);color:var(--text)}
+.push-ok{color:#16a34a}.push-warn{color:#d97706}
+@media(max-width:480px){.theme-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:480px){.tabs button{font-size:13px}.big{font-size:26px}}
 </style>
 </head>
 <body><main>
-<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.0.9</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.2</div></div><div id="marketBadge" class="badge">讀取中</div></div>
 <nav class="tabs">
 <button data-tab="todayPane" class="active">今天</button>
 <button data-tab="newsPane">重點頭條</button>
@@ -67,6 +95,9 @@ a{color:var(--accent);text-decoration:none}
 
 <section id="settingsPane" class="pane">
 <div class="card"><div class="row"><div><h2>帳號</h2><div id="authState" class="muted">目前使用訪客模式</div></div><button id="googleLogin" class="secondary">Google 登入</button></div><div id="firebaseHint" class="tiny" style="margin-top:8px">未設定 Firebase 時，設定仍會保存在這支手機。</div></div>
+<div class="card"><div class="row"><div><h2>主題外觀</h2><div class="muted">選一個今天看了會開心的介面 ✨</div></div><div id="themeNow" class="badge">深藍經典</div></div>
+<div id="themeGrid" class="theme-grid"></div>
+<div class="tiny" style="margin-top:10px">目前先全部開放測試；之後可把特別色改為付費解鎖。</div></div>
 <div class="card"><h2>提醒設定</h2><div class="setting"><label>預設重大事件提醒<select id="defaultReminder"><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label></div>
 <div class="setting"><div class="title">個別事件覆寫</div><div id="eventOverrides"></div></div>
 <div class="setting"><button id="enablePush" class="primary" type="button">開啟手機通知</button><div id="pushState" class="tiny" style="margin-top:8px">Push 需完成 Firebase 設定。</div></div></div>
@@ -103,8 +134,79 @@ $('sizeCalc').onsubmit=e=>{e.preventDefault();let s=SPECS[$('sizeSymbol').value]
 function renderSettings(){$('defaultReminder').value=settings.defaultReminder;$('settingRR').value=settings.minRR;$('settingFee').value=settings.fee;$('fee').value=settings.fee;$('minRR').value=settings.minRR;$('eventOverrides').innerHTML=TYPES.map(t=>`<label style="margin-top:8px">${t}<select data-ov="${t}"><option value="">沿用預設</option><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label>`).join('');document.querySelectorAll('[data-ov]').forEach(s=>s.value=settings.overrides?.[s.dataset.ov]??'');$('products').innerHTML=Object.keys(SPECS).map(p=>`<button class="pill ${(settings.products||[]).includes(p)?'on':''}" data-p="${p}" type="button">${p}</button>`).join('');document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>b.classList.toggle('on'))}
 $('saveSettings').onclick=()=>{settings.defaultReminder=$('defaultReminder').value;settings.minRR=$('settingRR').value;settings.fee=$('settingFee').value;settings.products=[...document.querySelectorAll('[data-p].on')].map(x=>x.dataset.p);settings.overrides={};document.querySelectorAll('[data-ov]').forEach(s=>{if(s.value!=='')settings.overrides[s.dataset.ov]=s.value});localStorage.setItem('tradeSettings',JSON.stringify(settings));alert('設定已儲存')};
 
-async function initFirebase(){try{let cfg=await import('/firebase-config.js');if(String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw Error();$('firebaseHint').textContent='Firebase 設定已填入；下一步啟用 Google 登入與 Push。'}catch{$('googleLogin').disabled=true;$('googleLogin').textContent='待設定 Firebase';$('firebaseHint').textContent='Google 登入與 Push 需下一步填入你的 Firebase 專案金鑰。'}}
-$('enablePush').onclick=()=>{$('pushState').textContent='下一步完成 Firebase 後即可啟用背景通知。'};
-renderSettings();loadEvents();loadNews();setInterval(tick,30000);if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});initFirebase();
+const THEMES={
+ navy:{name:'深藍經典',note:'專業沉穩',dots:['#080d19','#151e31','#38bdf8']},
+ pink:{name:'草莓奶霜',note:'明亮可愛',dots:['#fff3f6','#ffb6cc','#ff5f93']},
+ cream:{name:'奶油拿鐵',note:'溫暖療癒',dots:['#fffaf1','#ead5bd','#b8784f']},
+ mint:{name:'薄荷奶蓋',note:'清透輕快',dots:['#effff9','#aee9d3','#38c997']}
+};
+function applyTheme(key){
+ if(!THEMES[key])key='navy';
+ document.documentElement.dataset.theme=key==='navy'?'':key;
+ localStorage.setItem('tradeTheme',key);
+ document.querySelector('meta[name="theme-color"]').setAttribute('content',getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#080d19');
+ renderThemes(key);
+}
+function renderThemes(active=localStorage.getItem('tradeTheme')||'navy'){
+ $('themeNow').textContent=THEMES[active]?.name||THEMES.navy.name;
+ $('themeGrid').innerHTML=Object.entries(THEMES).map(([k,t],i)=>`<button type="button" class="theme-choice ${k===active?'active':''}" data-theme-key="${k}">
+   ${i?'<span class="pro-tag">特別色</span>':''}
+   <div class="theme-name">${t.name}</div><div class="theme-note">${t.note}</div>
+   <div class="theme-dots">${t.dots.map(c=>`<i style="background:${c}"></i>`).join('')}</div>
+ </button>`).join('');
+ document.querySelectorAll('[data-theme-key]').forEach(b=>b.onclick=()=>applyTheme(b.dataset.themeKey));
+}
+
+let messagingApi=null;
+async function initFirebase(){
+ try{
+   const cfg=await import('/firebase-config.js?v=210');
+   if(!cfg.firebaseConfig?.apiKey || String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw new Error('config missing');
+   const [{initializeApp},{getMessaging,getToken,onMessage}]=await Promise.all([
+     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
+     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js')
+   ]);
+   const app=initializeApp(cfg.firebaseConfig);
+   const messaging=getMessaging(app);
+   messagingApi={messaging,getToken,onMessage,vapidKey:cfg.vapidKey};
+   $('firebaseHint').textContent='Firebase 已連線，可啟用手機 Push。';
+   $('googleLogin').disabled=true;
+   $('googleLogin').textContent='Google 登入稍後加入';
+   onMessage(messaging,payload=>{
+     const title=payload?.notification?.title||'交易小提醒';
+     const body=payload?.notification?.body||'收到新的交易提醒';
+     $('pushState').textContent=`✅ 前景通知：${title}｜${body}`;
+   });
+ }catch(err){
+   $('googleLogin').disabled=true;$('googleLogin').textContent='待設定 Firebase';
+   $('firebaseHint').textContent='請先填入 firebase-config.js 與 VAPID 公開金鑰。';
+   messagingApi=null;
+ }
+}
+async function enablePush(){
+ if(!('Notification'in window)){ $('pushState').textContent='這個瀏覽器不支援通知。'; return; }
+ if(!messagingApi){ $('pushState').textContent='尚未完成 Firebase 設定。'; return; }
+ try{
+   $('enablePush').disabled=true;$('pushState').textContent='正在要求通知權限…';
+   const permission=await Notification.requestPermission();
+   if(permission!=='granted'){ $('pushState').textContent='通知權限未允許。'; return; }
+   let reg=await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
+   if(!reg)reg=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+   const token=await messagingApi.getToken(messagingApi.messaging,{vapidKey:messagingApi.vapidKey,serviceWorkerRegistration:reg});
+   if(!token)throw new Error('無法取得 FCM token');
+   localStorage.setItem('fcmToken',token);
+   localStorage.setItem('pushEnabled','1');
+   $('pushState').innerHTML='✅ 這台裝置已完成 Push 註冊。<br><span class="tiny">下一步接上後端排程，就能自動在 CPI / NFP / FOMC 前推播。</span>';
+   $('enablePush').textContent='通知已開啟';
+ }catch(err){
+   $('pushState').textContent='Push 設定失敗：'+(err?.message||err);
+ }finally{$('enablePush').disabled=false}
+}
+$('enablePush').onclick=enablePush;
+
+const savedTheme=localStorage.getItem('tradeTheme')||'navy';
+applyTheme(savedTheme);
+renderSettings();loadEvents();loadNews();setInterval(tick,30000);
+initFirebase();
 </script>
 </body></html>

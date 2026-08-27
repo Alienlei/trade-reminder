@@ -1,0 +1,13 @@
+V2.1.2 完整版
+已包含：
+- index.html
+- firebase-config.js
+- firebase-config-sw.js
+- firebase-messaging-sw.js
+- manifest.webmanifest
+- icon-192.png
+- icon-512.png
+
+注意：
+GitHub 原本的 netlify/ 資料夾請保留，不要刪除。
+這次把上述檔案上傳到 repo 根目錄即可。
