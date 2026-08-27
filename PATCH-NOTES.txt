@@ -1,5 +1,6 @@
-V2.1.6
-- Uses a newly created API key inside the correct Firebase/Google Cloud project: trade-reminder-d1990.
-- API key restrictions: Firebase Installations API + FCM Registration API.
-- Cache-busting bumped to v=216.
-- Existing Firebase appId and VAPID key unchanged for this test.
+V2.1.6-debug
+- 不改 Google Cloud / Firebase 設定。
+- 顯示瀏覽器實際讀到的 projectId / appId / senderId。
+- API key 與 VAPID 只顯示部分字元。
+- 顯示目前 service worker URL。
+- Push 失敗時追加 lastError。
