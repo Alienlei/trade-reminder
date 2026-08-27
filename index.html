@@ -54,7 +54,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 </style>
 </head>
 <body><main>
-<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.1.8</div></div><div id="marketBadge" class="badge">讀取中</div></div>
+<div class="top"><div><div id="now" class="muted">台灣時間</div><h1>交易小提醒</h1><div class="tiny">V2.2.0</div></div><div id="marketBadge" class="badge">讀取中</div></div>
 <nav class="tabs">
 <button data-tab="todayPane" class="active">今天</button>
 <button data-tab="newsPane">重點頭條</button>
@@ -69,7 +69,7 @@ body,.card,.tabs button,input,select,.secondary,.pill{transition:background-colo
 </section>
 
 <section id="newsPane" class="pane">
-<div class="card"><div class="row"><div><h2>重點頭條</h2><div class="muted">全球市場最重要的 5 條｜自動繁中整理</div></div><button id="refreshNews" class="secondary">更新</button></div><div id="headlines"></div></div>
+<div class="card"><div class="row"><div><h2>重點頭條</h2><div class="muted">全球市場最重要的 5 條｜自動繁中整理</div><div id="newsUpdatedAt" class="tiny" style="margin-top:4px">最後更新：尚未更新｜App 開啟時每 60 分鐘自動更新</div></div><button id="refreshNews" class="secondary">更新</button></div><div id="headlines"></div></div>
 </section>
 
 <section id="calcPane" class="pane">
@@ -125,14 +125,46 @@ async function loadEvents(){try{let r=await fetch('/.netlify/functions/economic-
 function dateLabel(e){if(e.dateOnly)return new Intl.DateTimeFormat('zh-TW',{timeZone:TZ,month:'numeric',day:'numeric',weekday:'short'}).format(e.d)+'｜日期提醒';return fmt(e.d)}
 function renderEvents(){let now=new Date(),list=events.filter(e=>e.d>now).slice(0,12);$('events').innerHTML=list.map(e=>`<div class="event"><div class="row"><div><div class="title">${esc(e.name)}</div><div class="tiny">${esc(e.source)}</div></div><div style="text-align:right"><div>${dateLabel(e)}</div><div class="tiny">${dur(e.d-now)}</div></div></div></div>`).join('')||'<div class="event muted">目前沒有未來事件。</div>'}
 function tick(){let now=new Date();$('now').textContent='台灣時間｜'+new Intl.DateTimeFormat('zh-TW',{timeZone:TZ,year:'numeric',month:'numeric',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(now);let n=events.find(e=>e.d>now);if(!n)return;let min=(n.d-now)/60000;$('nextName').textContent=n.name;$('nextTime').textContent=dateLabel(n)+'｜'+n.source;$('countdown').textContent=dur(n.d-now);if(n.dateOnly){$('marketBadge').textContent='日期提醒';$('guard').textContent='尚有距離';return}$('marketBadge').textContent=min<=30?'⚠️ 交易警戒':min<=120?'注意事件':'目前無近端事件';$('guard').textContent=min<=30?'30分鐘內':min<=120?'2小時內':'尚有距離'}
-async function loadNews(){try{let r=await fetch('/.netlify/functions/headlines?t='+Date.now(),{cache:'no-store'}),j=await r.json(),a=(j.headlines||[]).slice(0,5);$('headlines').innerHTML=a.map((x,i)=>`<div class="headline"><div class="tiny">#${i+1}｜${esc(x.domain)}</div><div class="title">${esc(x.title)}</div><div class="muted">${esc(x.why)}</div><a target="_blank" rel="noopener" href="${x.url}">查看來源 ↗</a></div>`).join('')||'<div class="headline muted">目前沒有足夠重要的頭條。</div>';$('headlineTeaser').textContent=a.length?`今日已整理 ${a.length} 條重點頭條。`:'今日暫無足夠重要頭條。'}catch{$('headlines').innerHTML='<div class="headline muted">新聞來源暫時無法讀取。</div>'}}
-$('refreshEvents').onclick=loadEvents;$('refreshNews').onclick=loadNews;
+let newsLoading=false,lastNewsFetch=Number(localStorage.getItem('lastNewsFetch')||0);
+function newsTimeLabel(ts){
+ if(!ts)return'最後更新：尚未更新｜App 開啟時每 60 分鐘自動更新';
+ const t=new Intl.DateTimeFormat('zh-TW',{timeZone:TZ,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ts));
+ return `最後更新：${t}｜App 開啟時每 60 分鐘自動更新`;
+}
+async function loadNews(force=false){
+ if(newsLoading)return;
+ const now=Date.now();
+ if(!force && lastNewsFetch && now-lastNewsFetch<60*60*1000){
+   $('newsUpdatedAt').textContent=newsTimeLabel(lastNewsFetch);
+   return;
+ }
+ newsLoading=true;
+ $('refreshNews').disabled=true;
+ $('newsUpdatedAt').textContent='正在更新新聞…';
+ try{
+   const r=await fetch('/.netlify/functions/headlines?t='+Date.now(),{cache:'no-store'});
+   const j=await r.json();
+   const a=(j.headlines||[]).slice(0,5);
+   $('headlines').innerHTML=a.map((x,i)=>`<div class="headline"><div class="tiny">#${i+1}｜${esc(x.domain)}</div><div class="title">${esc(x.title)}</div><div class="muted">${esc(x.why)}</div><a target="_blank" rel="noopener" href="${x.url}">查看來源 ↗</a></div>`).join('')||'<div class="headline muted">目前沒有足夠重要的頭條。</div>';
+   $('headlineTeaser').textContent=a.length?`今日已整理 ${a.length} 條重點頭條。`:'今日暫無足夠重要頭條。';
+   lastNewsFetch=Date.now();
+   localStorage.setItem('lastNewsFetch',String(lastNewsFetch));
+   $('newsUpdatedAt').textContent=newsTimeLabel(lastNewsFetch);
+ }catch(err){
+   $('headlines').innerHTML='<div class="headline muted">新聞來源暫時無法讀取。</div>';
+   $('newsUpdatedAt').textContent=lastNewsFetch?newsTimeLabel(lastNewsFetch)+'｜本次更新失敗':'最後更新：失敗';
+ }finally{
+   newsLoading=false;
+   $('refreshNews').disabled=false;
+ }
+}
+$('refreshEvents').onclick=loadEvents;$('refreshNews').onclick=()=>loadNews(true);
 
 $('calc').onsubmit=e=>{e.preventDefault();let s=SPECS[$('symbol').value],dir=$('direction').value,en=+$('entry').value,st=+$('stop').value,ta=+$('target').value,q=Math.floor(+$('qty').value),fee=Math.max(0,+$('fee').value||0),min=Math.max(0,+$('minRR').value||0);if(!(en>0&&st>0&&ta>0&&q>0))return;let ok=dir==='long'?(st<en&&ta>en):(st>en&&ta<en);if(!ok){$('calcErr').textContent='停損／停利方向不正確。';$('calcErr').classList.remove('hidden');return}$('calcErr').classList.add('hidden');let rp=Math.abs(en-st),wp=Math.abs(ta-en),risk=rp*s.point*q,reward=wp*s.point*q,rr=wp/rp,tf=fee*q;$('riskPts').textContent=rp+' 點';$('riskCash').textContent=s.c+risk.toLocaleString();$('rewardPts').textContent=wp+' 點';$('rewardCash').textContent=s.c+reward.toLocaleString();$('netLoss').textContent='-'+s.c+(risk+tf).toLocaleString();$('netWin').textContent=s.c+Math.max(0,reward-tf).toLocaleString();$('rr').textContent=rr.toFixed(2)+'R';$('rrMsg').textContent=rr>=min?'✅ 達標':'⚠️ 未達標';$('results').classList.remove('hidden')};
 $('sizeCalc').onsubmit=e=>{e.preventDefault();let s=SPECS[$('sizeSymbol').value],max=+$('maxRisk').value,pts=+$('stopPoints').value,fee=Math.max(0,+$('sizeFee').value||0);if(!(max>0&&pts>0))return;$('sizeResult').textContent=`最多約 ${Math.max(0,Math.floor(max/(pts*s.point+fee)))} 口`;$('sizeResult').classList.remove('hidden')};
 
 function renderSettings(){$('defaultReminder').value=settings.defaultReminder;$('settingRR').value=settings.minRR;$('settingFee').value=settings.fee;$('fee').value=settings.fee;$('minRR').value=settings.minRR;$('eventOverrides').innerHTML=TYPES.map(t=>`<label style="margin-top:8px">${t}<select data-ov="${t}"><option value="">沿用預設</option><option value="0">不提醒</option><option value="15">前 15 分鐘</option><option value="30">前 30 分鐘</option><option value="60">前 60 分鐘</option></select></label>`).join('');document.querySelectorAll('[data-ov]').forEach(s=>s.value=settings.overrides?.[s.dataset.ov]??'');$('products').innerHTML=Object.keys(SPECS).map(p=>`<button class="pill ${(settings.products||[]).includes(p)?'on':''}" data-p="${p}" type="button">${p}</button>`).join('');document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>b.classList.toggle('on'))}
-$('saveSettings').onclick=()=>{settings.defaultReminder=$('defaultReminder').value;settings.minRR=$('settingRR').value;settings.fee=$('settingFee').value;settings.products=[...document.querySelectorAll('[data-p].on')].map(x=>x.dataset.p);settings.overrides={};document.querySelectorAll('[data-ov]').forEach(s=>{if(s.value!=='')settings.overrides[s.dataset.ov]=s.value});localStorage.setItem('tradeSettings',JSON.stringify(settings));alert('設定已儲存')};
+$('saveSettings').onclick=async()=>{settings.defaultReminder=$('defaultReminder').value;settings.minRR=$('settingRR').value;settings.fee=$('settingFee').value;settings.products=[...document.querySelectorAll('[data-p].on')].map(x=>x.dataset.p);settings.overrides={};document.querySelectorAll('[data-ov]').forEach(s=>{if(s.value!=='')settings.overrides[s.dataset.ov]=s.value});localStorage.setItem('tradeSettings',JSON.stringify(settings));const token=localStorage.getItem('fcmToken');if(token&&cloudApi){try{await savePushDevice(token)}catch{}}alert('設定已儲存')};
 
 const THEMES={
  navy:{name:'深藍經典',note:'專業沉穩',dots:['#080d19','#151e31','#38bdf8']},
@@ -157,46 +189,32 @@ function renderThemes(active=localStorage.getItem('tradeTheme')||'navy'){
  document.querySelectorAll('[data-theme-key]').forEach(b=>b.onclick=()=>applyTheme(b.dataset.themeKey));
 }
 
-let messagingApi=null;
+let messagingApi=null,cloudApi=null;
 async function initFirebase(){
  const dbg=[];
  try{
-   dbg.push('origin: '+location.origin);
-   dbg.push('secureContext: '+String(window.isSecureContext));
-   dbg.push('Notification: '+String('Notification' in window));
-   dbg.push('serviceWorker API: '+String('serviceWorker' in navigator));
-   dbg.push('PushManager: '+String('PushManager' in window));
-   dbg.push('indexedDB: '+String('indexedDB' in window));
-
-   const cfg=await import('/firebase-config.js?v=218');
-   dbg.push('config loaded: yes');
-   dbg.push('projectId: '+cfg.firebaseConfig?.projectId);
-   dbg.push('appId: '+cfg.firebaseConfig?.appId);
-   dbg.push('senderId: '+cfg.firebaseConfig?.messagingSenderId);
-   dbg.push('apiKey: '+String(cfg.firebaseConfig?.apiKey||'').slice(0,10)+'…'+String(cfg.firebaseConfig?.apiKey||'').slice(-4));
-   dbg.push('vapid: '+String(cfg.vapidKey||'').slice(0,10)+'…'+String(cfg.vapidKey||'').slice(-6));
-
-   if(!cfg.firebaseConfig?.apiKey || String(cfg.firebaseConfig.apiKey).startsWith('PASTE_'))throw new Error('config missing');
-
+   const cfg=await import('/firebase-config.js?v=220');
    const appMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js');
-   dbg.push('firebase-app import: ok');
-
    const msgMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging.js');
-   dbg.push('firebase-messaging import: ok');
-
-   const supported=await msgMod.isSupported();
-   dbg.push('messaging isSupported(): '+String(supported));
-   if(!supported) throw new Error('Firebase Messaging reports this browser/environment as unsupported');
+   const authMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js');
+   const fsMod=await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js');
 
    const app=appMod.initializeApp(cfg.firebaseConfig);
-   dbg.push('initializeApp: ok');
+   const supported=await msgMod.isSupported();
+   if(!supported)throw new Error('此瀏覽器環境不支援 Firebase Messaging');
 
    const messaging=msgMod.getMessaging(app);
-   dbg.push('getMessaging: ok');
+   const auth=authMod.getAuth(app);
+   const db=fsMod.getFirestore(app);
+
+   if(!auth.currentUser) await authMod.signInAnonymously(auth);
 
    messagingApi={messaging,getToken:msgMod.getToken,onMessage:msgMod.onMessage,vapidKey:cfg.vapidKey};
-   $('firebaseHint').textContent='Firebase 已連線，可啟用手機 Push。';
-   $('pushState').textContent='Firebase 已連線，請按「開啟手機通知」。';
+   cloudApi={auth,db,doc:fsMod.doc,setDoc:fsMod.setDoc,serverTimestamp:fsMod.serverTimestamp};
+
+   $('firebaseHint').textContent='Firebase 已連線；Push 裝置會自動同步到雲端。';
+   $('authState').textContent='已啟用匿名裝置識別';
+   $('pushState').textContent=localStorage.getItem('pushEnabled')==='1'?'✅ 通知已開啟；可重新同步裝置。':'Firebase 已連線，請按「開啟手機通知」。';
    $('googleLogin').disabled=true;
    $('googleLogin').textContent='Google 登入稍後加入';
 
@@ -206,22 +224,40 @@ async function initFirebase(){
      $('pushState').textContent=`✅ 前景通知：${title}｜${body}`;
    });
 
-   const regs=await navigator.serviceWorker?.getRegistrations?.()||[];
-   dbg.push('serviceWorkers: '+(regs.length?regs.map(r=>r.active?.scriptURL||r.waiting?.scriptURL||'(installing)').join(' | '):'(none)'));
-   $('firebaseDebug').textContent='DEBUG Firebase\n'+dbg.join('\n');
+   $('firebaseDebug').style.display='none';
  }catch(err){
-   messagingApi=null;
-   dbg.push('ERROR name: '+(err?.name||''));
-   dbg.push('ERROR code: '+(err?.code||''));
-   dbg.push('ERROR message: '+(err?.message||String(err)));
-   dbg.push('ERROR stack: '+String(err?.stack||'').split('\n').slice(0,3).join(' | '));
+   messagingApi=null; cloudApi=null;
    $('googleLogin').disabled=true;
    $('googleLogin').textContent='待設定 Firebase';
-   $('firebaseHint').textContent='Firebase 初始化失敗，請看下方 DEBUG。';
-   $('pushState').textContent='Push 尚未初始化；請看下方 DEBUG 錯誤。';
-   $('firebaseDebug').textContent='DEBUG Firebase\n'+dbg.join('\n');
+   $('firebaseHint').textContent='Firebase 初始化失敗。';
+   $('pushState').textContent='Push 尚未初始化：'+(err?.message||err);
+   $('firebaseDebug').style.display='block';
+   $('firebaseDebug').textContent='DEBUG Firebase\n'+(err?.stack||err?.message||String(err));
  }
 }
+
+async function savePushDevice(token){
+ if(!cloudApi?.auth?.currentUser)throw new Error('匿名登入尚未完成');
+ let deviceId=localStorage.getItem('tradeDeviceId');
+ if(!deviceId){
+   deviceId=(crypto.randomUUID?crypto.randomUUID():'dev-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+   localStorage.setItem('tradeDeviceId',deviceId);
+ }
+ const uid=cloudApi.auth.currentUser.uid;
+ const ref=cloudApi.doc(cloudApi.db,'users',uid,'devices',deviceId);
+ await cloudApi.setDoc(ref,{
+   fcmToken:token,
+   pushEnabled:true,
+   platform:navigator.platform||'',
+   userAgent:navigator.userAgent||'',
+   defaultReminder:Number(settings.defaultReminder||0),
+   overrides:settings.overrides||{},
+   products:settings.products||[],
+   updatedAt:cloudApi.serverTimestamp()
+ },{merge:true});
+ return {uid,deviceId};
+}
+
 async function enablePush(){
  if(!('Notification'in window)){ $('pushState').textContent='這個瀏覽器不支援通知。'; return; }
  if(!messagingApi){ $('pushState').textContent='尚未完成 Firebase 設定。'; return; }
@@ -251,7 +287,9 @@ async function enablePush(){
 
   localStorage.setItem('fcmToken',token);
   localStorage.setItem('pushEnabled','1');
-  $('pushState').innerHTML='✅ 這台裝置已完成 Push 註冊。<br><span class="tiny">FCM token 已重新建立。</span>';
+  $('pushState').textContent='Push 已取得，正在同步到雲端…';
+  const saved=await savePushDevice(token);
+  $('pushState').innerHTML='✅ 通知已開啟，這台裝置已同步到雲端。<br><span class="tiny">之後後端就能依你的提醒設定把通知送到這台裝置。</span>';
   $('enablePush').textContent='通知已開啟';
  }catch(err){
   $('pushState').textContent='Push 設定失敗：'+(err?.message||err);
@@ -262,6 +300,8 @@ $('enablePush').onclick=enablePush;
 const savedTheme=localStorage.getItem('tradeTheme')||'navy';
 applyTheme(savedTheme);
 renderSettings();loadEvents();loadNews();setInterval(tick,30000);
+setInterval(()=>loadNews(),60*60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')loadNews()});
 initFirebase();
 </script>
 </body></html>

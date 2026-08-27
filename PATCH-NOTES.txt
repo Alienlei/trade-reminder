@@ -1,5 +1,16 @@
-V2.1.8
-- Corrected Firebase API key character case exactly as shown in Firebase Console.
-- Correct key: AIzaSyCUiJTauCE_Rm0p_wZlcG3HDWm5y7thJWA
-- No other Firebase project/app/VAPID/Push logic changes.
-- Debug panel remains enabled.
+V2.2.0
+1. Push token cloud sync:
+   - Anonymous Firebase Auth
+   - Saves FCM token to Firestore:
+     users/{uid}/devices/{deviceId}
+   - Saves reminder overrides/products and updates them when settings are saved.
+
+2. News refresh:
+   - Shows last successful update time.
+   - Auto refreshes every 60 minutes while the app/page is running.
+   - When returning to the app, refreshes automatically if the last fetch is over 60 minutes old.
+   - Manual Update button always forces a fresh fetch.
+
+Important:
+- This is NOT a server-side hourly scheduler while the app is fully closed.
+- Server-side background news scheduling can be added later, but it uses backend execution quota.
