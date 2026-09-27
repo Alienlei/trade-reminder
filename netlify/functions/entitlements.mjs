@@ -8,7 +8,7 @@ const DEFAULT_ENTITLEMENTS = {
   themes: [],
 };
 
-function testEntitlements(uid) {
+function testEntitlements() {
   if (process.env.TEST_MODE !== 'true') return null;
   const mode = (process.env.TEST_ENTITLEMENT_MODE || 'all').toLowerCase();
   const all = {
@@ -28,10 +28,10 @@ function testEntitlements(uid) {
 
 export default async (request) => {
   try {
-    const user = await requireUser(request);
-    const simulated = testEntitlements(user.uid);
+    const simulated = testEntitlements();
     if (simulated) return json(simulated);
 
+    const user = await requireUser(request);
     if (process.env.FIREBASE_OWNER_UID && user.uid === process.env.FIREBASE_OWNER_UID) {
       return json({
         role: 'developer',
