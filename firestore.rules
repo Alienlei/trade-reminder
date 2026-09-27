@@ -1,0 +1,55 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // User-editable settings/device records only.
+    match /users/{userId} {
+      allow read: if owns(userId);
+      allow create, update: if owns(userId)
+        && !('role' in request.resource.data)
+        && !('baseAccess' in request.resource.data)
+        && !('pushPlan' in request.resource.data)
+        && !('pushExpiresAt' in request.resource.data)
+        && !('themes' in request.resource.data);
+      allow delete: if owns(userId);
+
+      match /devices/{deviceId} {
+        allow read, create, update, delete: if owns(userId);
+      }
+
+      match /settings/{docId} {
+        allow read, create, update, delete: if owns(userId);
+      }
+    }
+
+    // Paid access is server-controlled. Clients may read only their own record.
+    match /entitlements/{userId} {
+      allow read: if owns(userId);
+      allow write: if false;
+    }
+
+    // License bindings are never client-readable/writable.
+    match /licenseBindings/{licenseHash} {
+      allow read, write: if false;
+    }
+
+    // Shared app data is public read-only; backend/Admin SDK owns writes.
+    match /publicData/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
