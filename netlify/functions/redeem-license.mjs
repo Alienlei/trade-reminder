@@ -1,12 +1,9 @@
 import crypto from 'node:crypto';
 import { getAdmin, json, requireUser } from './_lib/firebase-admin.mjs';
+import { clientIdentity, enforceRateLimit } from './_lib/rate-limit.mjs';
 
-function normalizeKey(value = '') {
-  return String(value).trim().toUpperCase().replace(/\s+/g, '');
-}
-function hashKey(key) {
-  return crypto.createHash('sha256').update(key).digest('hex');
-}
+function normalizeKey(value = '') { return String(value).trim().toUpperCase().replace(/\s+/g, ''); }
+function hashKey(key) { return crypto.createHash('sha256').update(key).digest('hex'); }
 async function verifyPayhip(key) {
   const secret = process.env.PAYHIP_PRODUCT_SECRET_KEY;
   if (!secret) throw new Error('PAYHIP_PRODUCT_SECRET_KEY missing');
@@ -25,6 +22,7 @@ export default async (request) => {
   if (request.method !== 'POST') return json({ error: 'METHOD_NOT_ALLOWED' }, 405, { allow: 'POST' });
   try {
     const user = await requireUser(request);
+    await enforceRateLimit({ scope: 'license', identity: clientIdentity(request, user), limit: 6, windowMs: 10 * 60 * 1000 });
     const body = await request.json().catch(() => ({}));
     const licenseKey = normalizeKey(body.licenseKey);
     if (licenseKey.length < 12 || licenseKey.length > 128) return json({ error: 'INVALID_LICENSE_FORMAT' }, 400);
@@ -54,15 +52,9 @@ export default async (request) => {
         licenseBoundAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
     });
-
     return json({ ok: true, baseAccess: 'lifetime' });
   } catch (err) {
-    const map = {
-      INVALID_LICENSE: 400,
-      WRONG_PRODUCT: 400,
-      LICENSE_ALREADY_BOUND: 409,
-      PAYHIP_VERIFY_FAILED: 502,
-    };
+    const map = { INVALID_LICENSE: 400, WRONG_PRODUCT: 400, LICENSE_ALREADY_BOUND: 409, PAYHIP_VERIFY_FAILED: 502, RATE_LIMITED: 429 };
     return json({ error: err.message || 'LICENSE_ERROR' }, err.status || map[err.message] || 500);
   }
 };
