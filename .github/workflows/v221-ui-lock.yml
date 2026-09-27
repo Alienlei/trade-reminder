@@ -1,0 +1,27 @@
+name: V2.2.1 one-time UI lock patch
+
+on:
+  push:
+    branches: [v2.2.1-clean]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/patch-ui-lock.mjs
+      - name: Commit patch if needed
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add v221.html
+          git commit -m "Enforce base access UI lock"
+          git push
