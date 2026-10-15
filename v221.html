@@ -80,4 +80,5 @@ async function init(){try{runtime=await (await fetch('/.netlify/functions/app-co
 renderSettings();applyTheme(localStorage.getItem('tradeTheme')||'navy');loadEvents();loadNews();setInterval(tick,30000);setInterval(loadNews,60*60*1000);init().catch(err=>{$('authState').textContent='帳號服務初始化失敗';$('entitlementState').textContent=err.message||String(err)});
 </script>
 <!-- env-refresh-trigger -->
+<!-- owner-mode-refresh -->
 </body></html>
